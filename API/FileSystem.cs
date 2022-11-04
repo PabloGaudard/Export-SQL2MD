@@ -13,7 +13,7 @@ namespace ExportSQL2MD.API
     public class FileSystem
     {
         // Source Folder Info
-        static string sqlRepo, sqlFolder, sqlBranch, mdRepo, mdFolder, mdBranch;
+        static string wikiTitle, sqlRepo, sqlFolder, sqlBranch, mdRepo, mdFolder, mdBranch;
 
         static string tempFolder = $"{mdRepo}\\Export-SQL2MD";
         bool discardComments = false;
@@ -180,9 +180,9 @@ namespace ExportSQL2MD.API
         {
             //Gerar .Md da pasta
             StreamWriter subPastaMD = File.CreateText($"{mdFolder}.md");
-            subPastaMD.WriteLine($"# CNA {mdFolder}");
+            subPastaMD.WriteLine($"# {wikiTitle}");
             subPastaMD.WriteLine($"---");
-            subPastaMD.WriteLine($"ℹ️ Esta seção da Wiki guarda artigos e queries sobre o CNA {mdFolder}.");
+            subPastaMD.WriteLine($"ℹ️ Esta seção da Wiki guarda artigos e queries sobre o {wikiTitle}.");
             subPastaMD.WriteLine($"## Conteúdo 📖:");
 
             //Adicionar link do arquivo ao .MD da pasta
@@ -191,7 +191,7 @@ namespace ExportSQL2MD.API
             foreach (FileInfo file in Files)
             {
                 var fileName = file.Name.Replace(".md", "").Replace("-", " ");
-                subPastaMD.WriteLine($" - [x][{fileName}](/{mdFolder}/{file.Name})");
+                subPastaMD.WriteLine($" - [x][{fileName}]({mdFolder.Replace(mdRepo, "").Replace(@"\", "/")}/{file.Name})");
             }
             subPastaMD.Dispose();
         }
@@ -217,18 +217,27 @@ namespace ExportSQL2MD.API
                 Console.WriteLine(wiki.title);
 
             int userOption = askForOption();
-            dynamic optionValue = wikis[userOption - 1].value;
+            dynamic sourceSettings = wikis[userOption - 1].value["source"];
+            dynamic targetSettings = wikis[userOption - 1].value["target"];
 
             // Source Folder Info
-            sqlRepo = optionValue["source"]["repo"];
-            sqlFolder = $"{sqlRepo}\\{optionValue["source"]["folder"]}";
-            sqlBranch = optionValue["source"]["branch"];
+            sqlRepo = sourceSettings["repo"];
+            sqlFolder = $"{sqlRepo}\\{sourceSettings["folder"]}";
+            sqlBranch = sourceSettings["branch"];
 
             // Target Folder Info
-            mdRepo = optionValue["target"]["repo"];
-            mdFolder = $"{mdRepo}\\{optionValue["source"]["folder"]}";
-            mdBranch = optionValue["source"]["branch"];
+            mdRepo = targetSettings["repo"];
+            mdFolder = $"{mdRepo}\\{targetSettings["folder"]}";
+            mdBranch = targetSettings["branch"];
 
+            wikiTitle = wikis[userOption - 1].value["title"];
+
+            Console.WriteLine();
+            Console.Write("Deseja descartar comentários [s/n]: ");
+            string userAnswer = Console.ReadLine();
+
+            if (userAnswer.Equals("s"))
+                discardComments = true;
         }
 
         private int askForOption()
