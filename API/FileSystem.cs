@@ -13,16 +13,7 @@ namespace ExportSQL2MD.API
     public class FileSystem
     {
         // Source Folder Info
-        static string
-            sqlRepo = "C:\\TargetCNA\\CNA-Net.wiki",
-            sqlFolder = $"{sqlRepo}\\BOX",
-            sqlBranch = "Develop";
-
-        // Target Folder Info
-        static string
-            mdRepo = "C:\\TargetCNA\\CNA-Net.wiki",
-            mdFolder = $"{mdRepo}\\Sustentação\\BOX",
-            mdBranch = "wikiMaster";
+        static string sqlRepo, sqlFolder, sqlBranch, mdRepo, mdFolder, mdBranch;
 
         static string tempFolder = $"{mdRepo}\\Export-SQL2MD";
         bool discardComments = false;
@@ -44,8 +35,6 @@ namespace ExportSQL2MD.API
         public void UpdateAllFiles()
         {
 
-            ReadAppSettings();
-            return;
             //Trocar para branch onde estão os arquivos .SQL
             powershell.AddScript($"cd {sqlRepo}");
             powershell.AddScript($"git switch {sqlBranch}");
@@ -212,18 +201,63 @@ namespace ExportSQL2MD.API
             var jsonData = JObject.Parse(File.ReadAllText("API\\AppSettings.json")).Children();
             List<JToken> appSettings = jsonData.Children().First().ToList();
 
-            List<string> wikis = new List<string>();
+            List<MenuOption> wikis = new List<MenuOption>();
 
-            int i = 1;
-            wikis.Add("1 - Todos projetos");
-            foreach (var prop in appSettings)
+            wikis.Add(new MenuOption("[1] - Todos projetos"));
+            for (int i = 0; i < appSettings.Count(); i++)
             {
-                i++;
-                wikis.Add(i + " - " + prop.Path.Replace("wikis", "").Replace("[", "").Replace("]", "").Replace(".", "").Replace("'", ""));
+                string wikiName = appSettings[i].Path.Replace("wikis", "").Replace("[", "").Replace("]", "").Replace(".", "").Replace("'", "");
+                wikis.Add(new MenuOption("[" + (i + 2) + "] - " + wikiName, appSettings[i].First()));
             }
 
-            foreach (var wiki in wikis)
-                Console.WriteLine(wiki);
+            Console.WriteLine("Qual wiki deseja atualizar?");
+            Console.WriteLine();
+
+            foreach (MenuOption wiki in wikis)
+                Console.WriteLine(wiki.title);
+
+            int userOption = askForOption();
+            dynamic optionValue = wikis[userOption - 1].value;
+
+            // Source Folder Info
+            sqlRepo = optionValue["source"]["repo"];
+            sqlFolder = $"{sqlRepo}\\{optionValue["source"]["folder"]}";
+            sqlBranch = optionValue["source"]["branch"];
+
+            // Target Folder Info
+            mdRepo = optionValue["target"]["repo"];
+            mdFolder = $"{mdRepo}\\{optionValue["source"]["folder"]}";
+            mdBranch = optionValue["source"]["branch"];
+
+        }
+
+        private int askForOption()
+        {
+            Console.WriteLine();
+            Console.Write("[!] - Digite o número da opção: ");
+
+            int UserOption;
+            if (int.TryParse(Console.ReadLine(), out UserOption))
+            {
+                return UserOption;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(">> Opção Inválida <<");
+            Console.ResetColor();
+            return askForOption();
+        }
+
+        private class MenuOption
+        {
+            public string title;
+            public dynamic value;
+
+            public MenuOption(string title, dynamic value = null)
+            {
+                this.title = title;
+                this.value = value;
+            }
         }
     }
 }
