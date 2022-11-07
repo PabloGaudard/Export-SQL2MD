@@ -102,8 +102,21 @@ namespace ExportSQL2MD.API
                 using (StreamReader sr = file.OpenText())
                 {
                     string s = "";
+                    int i = 0;
                     while ((s = sr.ReadLine()) != null)
-                        mdFile.WriteLine(s);
+                    {
+                        if (s.StartsWith("---- ") && s.EndsWith(" ----"))
+                        {
+                            if (i > 0)
+                            {
+                                mdFile.WriteLine("```");
+                                mdFile.WriteLine("```SQL");
+                            }
+                        }
+                        else
+                            mdFile.WriteLine(s);
+                        i++;
+                    }
                 }
                 mdFile.WriteLine("```");
                 mdFile.Dispose();
@@ -130,19 +143,29 @@ namespace ExportSQL2MD.API
                     var destContents = File.ReadAllLines(destPath);
                     var overWritten = File.CreateText(destPath);
                     bool copyFromDest = true;
+                    int mdBlockIndex = 0;
 
                     foreach (string line in destContents)
                     {
                         if (line.ToLower().Contains("```sql"))
                         {
+                            mdBlockIndex++;
                             copyFromDest = false;
                             var sourceContents = File.ReadAllLines(sourcePath);
+                            int sqlBlockIndex = 1;
+
                             foreach (string sourceLine in sourceContents)
                             {
                                 bool addLine = true;
 
                                 if (sourceLine.Equals("```"))
+                                {
                                     addLine = false;
+                                    sqlBlockIndex++;
+                                }
+
+                                if (sqlBlockIndex != mdBlockIndex)
+                                    continue;
 
                                 if (discardComments)
                                 {
